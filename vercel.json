@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/stats/detailed", "destination": "/api/stats" },
+    { "source": "/api/zelapi/:path*", "destination": "/api/proxy" }
+  ]
+}

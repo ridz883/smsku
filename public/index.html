@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZELAPI OTP Real-Time Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white">ZELAPI <span class="text-blue-500">OTP</span></h1>
+                    <p class="text-xs text-slate-400">Real-Time Virtual Number & SMS Gateway</p>
+                </div>
+            </div>
+            <div id="global-stats-pill" class="hidden md:flex items-center space-x-6 text-xs bg-slate-800/80 px-4 py-2 rounded-full border border-slate-700">
+                <div><span class="text-slate-400">Total OTP:</span> <span id="stat-otp" class="font-semibold text-blue-400">...</span></div>
+                <div><span class="text-slate-400">Nomor Tersedia:</span> <span id="stat-numbers" class="font-semibold text-emerald-400">...</span></div>
+                <div><span class="text-slate-400">Layanan:</span> <span id="stat-services" class="font-semibold text-purple-400">...</span></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+        
+        <!-- Kolom Kiri: Request & Active Numbers -->
+        <div class="space-y-8 lg:col-span-1">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <h2 class="text-lg font-semibold mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-mobile-screen-button text-blue-500"></i>
+                    <span>Minta Nomor Virtual</span>
+                </h2>
+                <form id="form-request" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Pilih Layanan</label>
+                        <select id="select-service" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition">
+                            <option value="">Memuat layanan...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Pilih Negara</label>
+                        <select id="select-country" disabled class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition disabled:opacity-50">
+                            <option value="">Pilih layanan terlebih dahulu</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center space-x-2 shadow-lg shadow-blue-600/20">
+                        <i class="fa-solid fa-plus-circle"></i>
+                        <span>Generate Nomor</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold flex items-center space-x-2">
+                        <i class="fa-solid fa-sim-card text-emerald-500"></i>
+                        <span>Nomor Aktif Anda</span>
+                    </h2>
+                    <button onclick="loadMyNumbers()" class="text-xs text-slate-400 hover:text-white transition">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+                <div id="my-numbers-list" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+                    <p class="text-xs text-slate-500 text-center py-4">Belum ada nomor aktif.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Kanan: Kotak Masuk OTP & Live Feed -->
+        <div class="space-y-8 lg:col-span-2">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h2 class="text-lg font-semibold flex items-center space-x-2">
+                        <i class="fa-solid fa-envelope-open-text text-amber-500"></i>
+                        <span>Kotak Masuk OTP</span>
+                    </h2>
+                    <div class="flex items-center space-x-2 w-full sm:w-auto">
+                        <input type="text" id="input-check-number" placeholder="Nomor aktif (mis: 628...)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 w-full sm:w-48">
+                        <button onclick="startRealtimeOtpCheck()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-xl text-xs transition whitespace-nowrap">
+                            Pantau OTP
+                        </button>
+                    </div>
+                </div>
+                <div id="otp-result-card" class="bg-slate-950 border border-slate-800 rounded-xl p-5 text-center">
+                    <div class="py-8 text-slate-500">
+                        <i class="fa-solid fa-ticket text-3xl mb-2 opacity-40"></i>
+                        <p class="text-sm">Masukkan nomor atau pilih nomor aktif untuk mulai memantau kode OTP secara real-time.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold flex items-center space-x-2">
+                        <i class="fa-solid fa-globe text-purple-500"></i>
+                        <span>Live Feed OTP Publik</span>
+                    </h2>
+                    <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Real-Time Auto-Sync
+                    </span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="py-3 px-4">Layanan</th>
+                                <th class="py-3 px-4">Nomor</th>
+                                <th class="py-3 px-4">Kode OTP</th>
+                                <th class="py-3 px-4">Negara</th>
+                                <th class="py-3 px-4">Waktu</th>
+                            </tr>
+                        </thead>
+                        <tbody id="public-feed-body" class="divide-y divide-slate-800/60">
+                            <tr><td colspan="5" class="text-center py-6 text-slate-500">Memuat live feed...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+        ZELAPI Real-Time Dashboard &bull; Terintegrasi dengan ZELAPI API
+    </footer>
+
+    <!-- Script Koneksi API Real-Time -->
+    <script>
+        let otpInterval = null;
+
+        async function apiFetch(endpoint, options = {}) {
+            try {
+                const res = await fetch(`/api/proxy?endpoint=${encodeURIComponent(endpoint)}`, options);
+                return await res.json();
+            } catch (err) {
+                console.error("API Error:", err);
+                return { success: false };
+            }
+        }
+
+        async function loadStats() {
+            const data = await apiFetch('/api/stats/detailed?period=daily');
+            if (data) {
+                document.getElementById("stat-otp").innerText = data.otp_count || 0;
+                document.getElementById("stat-numbers").innerText = data.available_numbers || 0;
+                document.getElementById("stat-services").innerText = data.services_count || 0;
+            }
+        }
+
+        async function loadServices() {
+            const data = await apiFetch('/api/services');
+            const select = document.getElementById("select-service");
+            select.innerHTML = '<option value="">Pilih Layanan</option>';
+            if (data && data.success && data.services) {
+                data.services.forEach(s => {
+                    select.innerHTML += `<option value="${s.name}">${s.name} (${s.count} tersedia)</option>`;
+                });
+            }
+        }
+
+        document.getElementById("select-service").addEventListener("change", async function() {
+            const service = this.value;
+            const countrySelect = document.getElementById("select-country");
+            countrySelect.innerHTML = '<option value="">Pilih Negara</option>';
+            
+            if (service) {
+                countrySelect.disabled = false;
+                const data = await apiFetch(`/api/countries?service=${encodeURIComponent(service)}`);
+                if (data && data.success && data.countries) {
+                    data.countries.forEach(c => {
+                        countrySelect.innerHTML += `<option value="${c.name}">${c.name} (${c.count} tersedia)</option>`;
+                    });
+                }
+            } else {
+                countrySelect.disabled = true;
+            }
+        });
+
+        document.getElementById("form-request").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const service = document.getElementById("select-service").value;
+            const country = document.getElementById("select-country").value;
+
+            if (!service || !country) return alert("Pilih layanan dan negara!");
+
+            const res = await apiFetch('/api/request_number', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service, country })
+            });
+
+            if (res && res.success) {
+                alert(`Berhasil meminta nomor: ${res.number}`);
+                loadMyNumbers();
+            } else {
+                alert("Gagal meminta nomor. Stok mungkin kosong.");
+            }
+        });
+
+        async function loadMyNumbers() {
+            const data = await apiFetch('/api/my_numbers');
+            const container = document.getElementById("my-numbers-list");
+            
+            if (!data || !data.success || !data.numbers || data.numbers.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Belum ada nomor aktif.</p>`;
+                return;
+            }
+
+            container.innerHTML = "";
+            data.numbers.forEach(item => {
+                container.innerHTML += `
+                    <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex items-center justify-between text-xs">
+                        <div>
+                            <div class="font-bold text-slate-200">+${item.number}</div>
+                            <div class="text-[10px] text-slate-400">${item.service} &bull; ${item.country}</div>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <button onclick="selectNumberForOtp('${item.number}')" class="bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 px-2.5 py-1.5 rounded-lg transition" title="Cek OTP">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button onclick="releaseNumber('${item.number}')" class="bg-red-600/20 text-red-400 hover:bg-red-600/30 px-2.5 py-1.5 rounded-lg transition" title="Lepas Nomor">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function releaseNumber(number) {
+            if (confirm(`Yakin ingin melepaskan nomor ${number}?`)) {
+                const res = await apiFetch('/api/release_number', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number })
+                });
+                if (res && res.success) {
+                    loadMyNumbers();
+                    alert("Nomor berhasil dilepaskan.");
+                } else {
+                    alert("Gagal melepaskan nomor.");
+                }
+            }
+        }
+
+        function selectNumberForOtp(number) {
+            document.getElementById("input-check-number").value = number;
+            startRealtimeOtpCheck();
+        }
+
+        // Real-Time Polling OTP Tanpa Jeda (setiap 3 detik)
+        function startRealtimeOtpCheck() {
+            const number = document.getElementById("input-check-number").value.trim();
+            if (!number) return alert("Masukkan nomor telepon!");
+
+            if (otpInterval) clearInterval(otpInterval);
+
+            const check = async () => {
+                const data = await apiFetch(`/api/latest_otp?number=${encodeURIComponent(number)}`);
+                const resultCard = document.getElementById("otp-result-card");
+
+                if (data && data.success && data.has_otp) {
+                    resultCard.innerHTML = `
+                        <div class="py-2">
+                            <div class="text-xs text-slate-400 mb-1">Nomor: <span class="text-emerald-400 font-semibold">${number}</span></div>
+                            <div class="text-3xl font-extrabold tracking-widest text-amber-400 my-2">${data.otp_code}</div>
+                            <div class="text-[11px] text-emerald-400 font-medium">OTP Berhasil Diterima! (Real-time synced)</div>
+                        </div>
+                    `;
+                } else {
+                    resultCard.innerHTML = `
+                        <div class="py-4">
+                            <div class="text-xs text-slate-400 mb-2">Menunggu pesan masuk untuk nomor <span class="text-blue-400 font-semibold">${number}</span>...</div>
+                            <div class="inline-block w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    `;
+                }
+            };
+
+            check();
+            otpInterval = setInterval(check, 3000); // Polling otomatis setiap 3 detik
+        }
+
+        // Real-Time Public Feed Polling (setiap 4 detik)
+        async function loadPublicFeed() {
+            const data = await apiFetch('/api/otp?count=10');
+            const tbody = document.getElementById("public-feed-body");
+            if (data && Array.isArray(data) && data.length > 0) {
+                tbody.innerHTML = "";
+                data.forEach(row => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-900/50 transition">
+                            <td class="py-3 px-4 font-medium text-slate-200">${row[0]}</td>
+                            <td class="py-3 px-4 font-mono text-slate-400">${row[1]}</td>
+                            <td class="py-3 px-4 font-bold text-amber-400">${row[2]}</td>
+                            <td class="py-3 px-4 text-slate-400">${row[4]}</td>
+                            <td class="py-3 px-4 text-slate-500">${row[3]}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        window.onload = function() {
+            loadStats();
+            loadServices();
+            loadMyNumbers();
+            loadPublicFeed();
+            setInterval(loadPublicFeed, 4000); // Auto-sync live feed publik
+        };
+    </script>
+</body>
+</html>

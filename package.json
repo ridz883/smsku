@@ -1,0 +1,13 @@
+{
+  "name": "zelapi-dashboard",
+  "version": "1.0.0",
+  "description": "ZELAPI OTP Client Dashboard",
+  "main": "api/proxy.js",
+  "scripts": {
+    "start": "node api/proxy.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "node-fetch": "^2.6.7"
+  }
+}
